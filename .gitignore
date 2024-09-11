@@ -22,3 +22,6 @@ target/
 
 # Custom Scripts
 scripts/
+
+# Environment
+.env
