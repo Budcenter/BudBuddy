@@ -21,28 +21,32 @@ pub enum Subspecies {
     required_bot_permissions = "SEND_MESSAGES",
     category = "Strains"
 )]
-pub async fn search(ctx: Context<'_>, name: Option<String>, subspecies: Option<Subspecies>) -> CommandResult {
+pub async fn search(ctx: Context<'_>, name: Option<String>, subspecies: Option<Subspecies>, flavor: Option<String>) -> CommandResult {
 
     let pool = &ctx.data().pool;
 
     let result = sqlx::query!(
         r#"
         SELECT
-            id,
-            NAME,
-            description,
-            image_url,
-            subspecies AS "subspecies:String"
+            s.id,
+            s.NAME,
+            s.description,
+            s.image_url,
+            s.subspecies AS "subspecies:String"
         FROM
-            strains
+            public.strains s
+            LEFT JOIN public.strain_flavors sf ON s.id = sf.strain_id
+            LEFT JOIN public.unique_flavors uf ON sf.flavor_id = uf.id
         WHERE
-            (NAME ILIKE COALESCE('%' || $1 || '%', NAME))
-            AND (subspecies = COALESCE($2, subspecies))
+            (s.NAME ILIKE COALESCE('%' || $1 || '%', s.NAME))
+            AND (s.subspecies = COALESCE($2, s.subspecies))
+            AND (uf.flavor ILIKE (COALESCE($3, uf.flavor)) OR $3 IS NULL)
         LIMIT
             15;
         "#,
         name,
         subspecies as _,
+        flavor
     )
     .fetch_all(pool)
     .await?;
