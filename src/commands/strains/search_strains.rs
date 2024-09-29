@@ -27,7 +27,7 @@ pub async fn search(ctx: Context<'_>, name: Option<String>, subspecies: Option<S
 
     let result = sqlx::query!(
         r#"
-        SELECT
+        SELECT DISTINCT
             s.id,
             s.NAME,
             s.description,
@@ -41,6 +41,8 @@ pub async fn search(ctx: Context<'_>, name: Option<String>, subspecies: Option<S
             (s.NAME ILIKE COALESCE('%' || $1 || '%', s.NAME))
             AND (s.subspecies = COALESCE($2, s.subspecies))
             AND (uf.flavor ILIKE (COALESCE($3, uf.flavor)) OR $3 IS NULL)
+        ORDER BY
+            s.id ASC
         LIMIT
             15;
         "#,
