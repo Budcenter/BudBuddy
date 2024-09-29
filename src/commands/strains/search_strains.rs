@@ -1,4 +1,7 @@
-use poise::{serenity_prelude::{Color, CreateEmbed}, ChoiceParameter, CreateReply};
+use poise::{
+    serenity_prelude::{Color, CreateEmbed},
+    ChoiceParameter, CreateReply,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
 
@@ -31,7 +34,7 @@ pub async fn search(
     effect: Option<String>,
     #[description = "Reported strain ailments"]
     #[autocomplete = "autocomplete_ailments"]
-    ailment: Option<String>
+    ailment: Option<String>,
 ) -> CommandResult {
     let pool = &ctx.data().pool;
 
@@ -77,7 +80,10 @@ pub async fn search(
     let mut description = String::new();
 
     if result.len() == 0 {
-        let embed = CreateEmbed::default().title("No Strains found").description("Try broadening your seach filters").color(Color::from_rgb(255, 0, 0));
+        let embed = CreateEmbed::default()
+            .title("No Strains found")
+            .description("Try broadening your seach filters")
+            .color(Color::from_rgb(255, 0, 0));
         let reply = CreateReply::default().embed(embed);
         ctx.send(reply).await?;
         return Ok(());
@@ -121,7 +127,6 @@ async fn autocomplete_effects(ctx: Context<'_>, searching: &str) -> Vec<String> 
         .collect()
 }
 
-
 async fn autocomplete_ailments(ctx: Context<'_>, searching: &str) -> Vec<String> {
     let ailments = sqlx::query_scalar!("SELECT ailment FROM public.unique_ailments")
         .fetch_all(&ctx.data().pool)
@@ -129,6 +134,10 @@ async fn autocomplete_ailments(ctx: Context<'_>, searching: &str) -> Vec<String>
         .unwrap_or_default();
     ailments
         .into_iter()
-        .filter(|ailment| ailment.to_lowercase().starts_with(&searching.to_lowercase()))
+        .filter(|ailment| {
+            ailment
+                .to_lowercase()
+                .starts_with(&searching.to_lowercase())
+        })
         .collect()
 }
