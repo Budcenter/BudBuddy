@@ -1,6 +1,4 @@
-use poise::{
-    serenity_prelude::CreateEmbed, ChoiceParameter, CreateReply
-};
+use poise::{serenity_prelude::CreateEmbed, ChoiceParameter, CreateReply};
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
 
@@ -21,8 +19,12 @@ pub enum Subspecies {
     required_bot_permissions = "SEND_MESSAGES",
     category = "Strains"
 )]
-pub async fn search(ctx: Context<'_>, name: Option<String>, subspecies: Option<Subspecies>, flavor: Option<String>) -> CommandResult {
-
+pub async fn search(
+    ctx: Context<'_>,
+    name: Option<String>,
+    subspecies: Option<Subspecies>,
+    flavor: Option<String>,
+) -> CommandResult {
     let pool = &ctx.data().pool;
 
     let result = sqlx::query!(
@@ -62,13 +64,11 @@ pub async fn search(ctx: Context<'_>, name: Option<String>, subspecies: Option<S
 
     let title = match name {
         Some(t) => format!("Searching for {t}"),
-        None => "Strains".to_string()
+        None => "Strains".to_string(),
     };
-
 
     let embed = CreateEmbed::default().title(title).description(description);
     let reply = CreateReply::default().embed(embed);
     ctx.send(reply).await?;
     Ok(())
-
 }

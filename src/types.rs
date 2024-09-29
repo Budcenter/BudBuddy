@@ -1,10 +1,13 @@
-use sqlx::{postgres::{PgConnectOptions, PgSslMode}, PgPool};
+use sqlx::{
+    postgres::{PgConnectOptions, PgSslMode},
+    PgPool,
+};
 use tracing::{debug, error, instrument};
 
 use crate::unwrap_env_var;
 
 pub struct Data {
-    pub pool: PgPool
+    pub pool: PgPool,
 }
 #[instrument]
 async fn connect_to_db() -> PgPool {
@@ -16,21 +19,20 @@ async fn connect_to_db() -> PgPool {
 
     debug!("{:#?}", pg_options);
 
-    match PgPool::connect_with(pg_options)
-        .await {
-            Ok(pool) => pool,
-            Err(error) => {
-                error!(%error);
-                std::process::exit(1)
-            }
+    match PgPool::connect_with(pg_options).await {
+        Ok(pool) => pool,
+        Err(error) => {
+            error!(%error);
+            std::process::exit(1)
         }
+    }
 }
 
 impl Data {
     /// Panics if it cannot connect to the database from the environment variables
     pub async fn new() -> Self {
         Self {
-            pool: connect_to_db().await
+            pool: connect_to_db().await,
         }
     }
 }

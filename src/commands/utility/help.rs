@@ -1,6 +1,6 @@
 use poise::samples::HelpConfiguration;
 
-use crate::types::{Context, CommandResult};
+use crate::types::{CommandResult, Context};
 
 /// Show help message
 #[poise::command(prefix_command, slash_command, category = "Utility")]
@@ -34,8 +34,10 @@ pub async fn help(
 async fn autocomplete_commands(ctx: Context<'_>, searching: &str) -> Vec<String> {
     let mut result = Vec::new();
     for command in &ctx.framework().options().commands {
-        if command.owners_only || command.hide_in_help { continue };
-    
+        if command.owners_only || command.hide_in_help {
+            continue;
+        };
+
         if command.qualified_name.starts_with(searching) {
             result.push(command.qualified_name.clone())
         }

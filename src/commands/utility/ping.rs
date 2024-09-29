@@ -11,7 +11,10 @@ pub async fn ping(ctx: Context<'_>) -> CommandResult {
     let msg = format!("Current Latency: {}ms", ping_before.elapsed()?.as_millis());
 
     ping_msg
-        .edit(ctx, CreateReply::default().content(msg.as_str()).ephemeral(true))
+        .edit(
+            ctx,
+            CreateReply::default().content(msg.as_str()).ephemeral(true),
+        )
         .await?;
 
     Ok(())

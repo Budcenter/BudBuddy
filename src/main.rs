@@ -1,8 +1,11 @@
 use anyhow::anyhow;
-use tracing_subscriber::EnvFilter;
 use std::{env::VarError, process::exit};
+use tracing_subscriber::EnvFilter;
 
-use poise::{serenity_prelude::{self as serenity}, FrameworkOptions};
+use poise::{
+    serenity_prelude::{self as serenity},
+    FrameworkOptions,
+};
 use tracing::{error, info, instrument};
 use types::Data;
 
@@ -41,7 +44,7 @@ async fn main() -> Result<(), anyhow::Error> {
         commands::utility::ping::ping(),
         commands::utility::help::help(),
         commands::strains::search_strains::search(),
-        commands::utility::register::register()
+        commands::utility::register::register(),
     ];
 
     let framework_options = FrameworkOptions {
@@ -55,7 +58,7 @@ async fn main() -> Result<(), anyhow::Error> {
             Box::pin(async move {
                 info!("Registering commands...");
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                
+
                 info!("Online on bot: {} ({})", ready.user.name, ready.user.id);
                 Ok(bot_data)
             })
@@ -77,11 +80,10 @@ fn unwrap_env_var(name: &str) -> String {
         Err(VarError::NotPresent) => {
             error!("{name} not set");
             exit(1)
-        },
+        }
         Err(VarError::NotUnicode(s)) => {
             error!("{name} is not valid unicode: {:#?}", s);
             exit(1)
         }
     }
 }
-
