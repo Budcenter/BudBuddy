@@ -1,24 +1,37 @@
-#![allow(unused)]
-
 use anyhow::anyhow;
-use std::default;
+use tracing_subscriber::EnvFilter;
+use std::{env::VarError, process::exit};
 
-use poise::{serenity_prelude as serenity, FrameworkOptions};
-use tracing::{debug, error, info, instrument};
+use poise::{serenity_prelude::{self as serenity}, FrameworkOptions};
+use tracing::{error, info, instrument};
 use types::Data;
 
 pub mod commands;
 pub mod types;
 
-// Sets the log level for the bot. Default: INFO
-const LEVEL: tracing::Level = tracing::Level::INFO;
-
 #[tokio::main]
 #[instrument]
 async fn main() -> Result<(), anyhow::Error> {
-    let token = dotenvy::var("DISCORD_TOKEN")?;
+    dotenvy::dotenv().ok();
 
-    tracing_subscriber::fmt().with_max_level(LEVEL).init();
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "info");
+    }
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
+    let bot_data = Data::new().await;
+
+    let token = unwrap_env_var("DISCORD_TOKEN");
+
+    let _guild_id = match unwrap_env_var("GUILD_ID").parse() {
+        Ok(v) => serenity::GuildId::new(v),
+        Err(e) => {
+            error!(?e);
+            exit(1);
+        }
+    };
 
     info!("Starting Bot...");
 
@@ -27,6 +40,8 @@ async fn main() -> Result<(), anyhow::Error> {
     let commands = vec![
         commands::utility::ping::ping(),
         commands::utility::help::help(),
+        commands::strains::search_strains::search(),
+        commands::utility::register::register()
     ];
 
     let framework_options = FrameworkOptions {
@@ -40,8 +55,9 @@ async fn main() -> Result<(), anyhow::Error> {
             Box::pin(async move {
                 info!("Registering commands...");
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                info!("Online");
-                Ok(Data {})
+                
+                info!("Online on bot: {} ({})", ready.user.name, ready.user.id);
+                Ok(bot_data)
             })
         })
         .build();
@@ -54,3 +70,18 @@ async fn main() -> Result<(), anyhow::Error> {
     client.start().await.expect("Failed to start bot");
     Ok(())
 }
+
+fn unwrap_env_var(name: &str) -> String {
+    match std::env::var(name) {
+        Ok(t) => t,
+        Err(VarError::NotPresent) => {
+            error!("{name} not set");
+            exit(1)
+        },
+        Err(VarError::NotUnicode(s)) => {
+            error!("{name} is not valid unicode: {:#?}", s);
+            exit(1)
+        }
+    }
+}
+
