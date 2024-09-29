@@ -3,6 +3,8 @@
         "git",
         "cargo",
         "startup",
-        "vscode"
+        "vscode",
+        "commands",
+        "database"
     ]
 }
