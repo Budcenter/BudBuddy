@@ -20,6 +20,7 @@ pub enum Subspecies {
 #[poise::command(
     slash_command,
     required_bot_permissions = "SEND_MESSAGES",
+    nsfw_only = true,
     category = "Strains"
 )]
 pub async fn search(
@@ -79,11 +80,11 @@ pub async fn search(
 
     let mut description = String::new();
 
-    if result.len() == 0 {
+    if result.is_empty() {
         let embed = CreateEmbed::default()
             .title("No Strains found")
             .description("Try broadening your seach filters")
-            .color(Color::from_rgb(255, 0, 0));
+            .color(Color::RED);
         let reply = CreateReply::default().embed(embed);
         ctx.send(reply).await?;
         return Ok(());
@@ -91,7 +92,7 @@ pub async fn search(
 
     for strain in result {
         description.push_str(&format!("- `{}`: **{}**", strain.id, strain.name));
-        description.push_str("\n");
+        description.push('\n');
     }
 
     let title = match name {
@@ -99,7 +100,10 @@ pub async fn search(
         None => "Strains".to_string(),
     };
 
-    let embed = CreateEmbed::default().title(title).description(description);
+    let embed = CreateEmbed::default()
+        .title(title)
+        .description(description)
+        .color(Color::PURPLE);
     let reply = CreateReply::default().embed(embed);
     ctx.send(reply).await?;
     Ok(())
