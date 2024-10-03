@@ -3,10 +3,10 @@ use std::{env::VarError, process::exit};
 use tracing_subscriber::EnvFilter;
 
 use poise::{
-    serenity_prelude::{self as serenity},
-    FrameworkOptions,
+    serenity_prelude::{self as serenity, Color, CreateEmbed},
+    CreateReply, FrameworkOptions,
 };
-use tracing::{error, info, instrument};
+use tracing::{error, info, instrument, warn};
 use types::Data;
 
 pub mod commands;
@@ -45,10 +45,43 @@ async fn main() -> Result<(), anyhow::Error> {
         commands::utility::help::help(),
         commands::strains::search_strains::search(),
         commands::utility::register::register(),
+        commands::utility::about::about(),
     ];
 
     let framework_options = FrameworkOptions {
         commands,
+        on_error: |error| {
+            Box::pin(async move {
+                if let poise::FrameworkError::CooldownHit {
+                    remaining_cooldown,
+                    ctx,
+                    ..
+                } = error
+                {
+                    ctx.send(error_reply(
+                        &format!("/{} on cooldown", ctx.command().qualified_name),
+                        Some(&format!(
+                            "Please wait {:.1} seconds before trying again",
+                            remaining_cooldown.as_secs_f32()
+                        )),
+                    ))
+                    .await
+                    .ok();
+                } else if let poise::FrameworkError::NsfwOnly { ctx, .. } = error {
+                    ctx.send(error_reply(
+                        "NSFW Only Command",
+                        Some(&format!(
+                            "`/{}` can only be used in NSFW channels",
+                            ctx.command().identifying_name,
+                        )),
+                    ))
+                    .await
+                    .ok();
+                } else {
+                    warn!("Unhandled error: {}", error);
+                }
+            })
+        },
         ..Default::default()
     };
 
@@ -86,4 +119,19 @@ fn unwrap_env_var(name: &str) -> String {
             exit(1)
         }
     }
+}
+
+fn error_embed(title: &str, message: Option<&str>) -> CreateEmbed {
+    let mut embed = CreateEmbed::default().color(Color::RED).title(title);
+
+    if message.is_some() {
+        embed = embed.description(message.unwrap());
+    }
+    embed
+}
+
+fn error_reply(title: &str, message: Option<&str>) -> CreateReply {
+    let embed = error_embed(title, message);
+
+    CreateReply::default().embed(embed).ephemeral(true)
 }
