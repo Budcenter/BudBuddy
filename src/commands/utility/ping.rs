@@ -6,8 +6,13 @@ use crate::types::{CommandResult, Context};
 #[poise::command(slash_command, category = "Utility")]
 pub async fn ping(ctx: Context<'_>) -> CommandResult {
     let ping_before = std::time::SystemTime::now();
+
     let ping_msg = ctx
-        .say("<a:Loading:1290442390338797650> Loading...")
+        .send(
+            CreateReply::default()
+                .content("<a:Loading:1290442390338797650> Loading...")
+                .ephemeral(true),
+        )
         .await?;
 
     let msg = format!("Current Latency: {}ms", ping_before.elapsed()?.as_millis());
