@@ -22,7 +22,7 @@ async fn connect_to_db() -> PgPool {
     match PgPool::connect_with(pg_options).await {
         Ok(pool) => pool,
         Err(error) => {
-            error!(%error);
+            error!("sqlx::Error::{:?}", error);
             std::process::exit(1)
         }
     }
