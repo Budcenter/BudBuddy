@@ -6,5 +6,9 @@
         "vscode",
         "commands",
         "database"
-    ]
+    ],
+    "[rust]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    }
 }
