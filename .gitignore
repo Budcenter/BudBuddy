@@ -26,3 +26,4 @@ scripts/
 # Environment
 .env
 prod-ca-2021.crt
+.vscode/sessions.json
