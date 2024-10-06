@@ -10,7 +10,10 @@ pub async fn about(ctx: Context<'_>) -> CommandResult {
     let embed = CreateEmbed::default()
         .title("Hi, I'm BudBuddy")
         .description("The official discord bot for BudCenter services.\n\nTry </help:1290103869791146077> for more commands")
-        .color(Color::PURPLE);
+        .color(Color::PURPLE)
+        .fields([
+            ("Credits", format!("- {} - Lead Developer\n- {} - Cannabot Developer", "@makeshiftartist", "@jay.0404"), true)
+        ]);
 
     let support_button = CreateButton::new_link("https://discord.gg/GjzwzDuD3S")
         .emoji(ReactionType::Unicode("❓".into()))
