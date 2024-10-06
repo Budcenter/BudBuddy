@@ -4,6 +4,8 @@ use poise::{
 };
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
+use tokio::sync::OnceCell;
+use tracing::info;
 
 use crate::types::{CommandResult, Context};
 
@@ -59,8 +61,8 @@ pub async fn search(
             LEFT JOIN public.strain_ailments sa ON s.id = sa.strain_id
             LEFT JOIN public.unique_ailments ua ON sa.ailment_id = ua.id
         WHERE
-            (s.NAME ILIKE COALESCE('%' || $1 || '%', s.NAME))
-            AND (s.subspecies = COALESCE($2, s.subspecies))
+            (s.NAME ILIKE COALESCE('%' || $1 || '%', s.NAME) OR $1 IS NULL)
+            AND (s.subspecies = COALESCE($2, s.subspecies) OR $2 IS NULL)
             AND (uf.flavor ILIKE (COALESCE($3, uf.flavor)) OR $3 IS NULL)
             AND (ue.effect ILIKE (COALESCE($4, ue.effect)) OR $4 IS NULL)
             AND (ua.ailment ILIKE (COALESCE($5, ua.ailment)) OR $5 IS NULL)
@@ -109,14 +111,28 @@ pub async fn search(
     Ok(())
 }
 
+static FLAVORS: OnceCell<Vec<String>> = OnceCell::const_new();
+
 async fn autocomplete_flavors(ctx: Context<'_>, searching: &str) -> Vec<String> {
-    let flavors = sqlx::query_scalar!("SELECT flavor FROM public.unique_flavors")
-        .fetch_all(&ctx.data().pool)
-        .await
-        .unwrap_or_default();
+    let flavors = FLAVORS
+        .get_or_init(|| async {
+            info!("Fetched flavors");
+            sqlx::query_scalar!(
+                "SELECT DISTINCT flavor FROM public.unique_flavors ORDER BY flavor ASC;"
+            )
+            .fetch_all(&ctx.data().pool)
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .map(|flavor| flavor.to_lowercase())
+            .collect()
+        })
+        .await;
+
     flavors
+        .clone()
         .into_iter()
-        .filter(|flavor| flavor.to_lowercase().starts_with(&searching.to_lowercase()))
+        .filter(|flavor| flavor.starts_with(&searching.to_lowercase()))
         .collect()
 }
 
