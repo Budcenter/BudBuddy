@@ -5,7 +5,7 @@ use poise::{
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
 use tokio::sync::OnceCell;
-use tracing::info;
+use tracing::debug;
 
 use crate::types::{CommandResult, Context};
 
@@ -116,7 +116,7 @@ static FLAVORS: OnceCell<Vec<String>> = OnceCell::const_new();
 async fn autocomplete_flavors(ctx: Context<'_>, searching: &str) -> Vec<String> {
     let flavors = FLAVORS
         .get_or_init(|| async {
-            info!("Fetched flavors");
+            debug!("Fetched flavors");
             sqlx::query_scalar!(
                 "SELECT DISTINCT flavor FROM public.unique_flavors ORDER BY flavor ASC;"
             )
