@@ -75,9 +75,11 @@ pub async fn strain(
         .footer(CreateEmbedFooter::new(format!("ID: {}", id)));
 
     if let Some(s) = strain.effects.as_ref() {
-        let effects = s.join(", ");
+        if !s.is_empty() {
+            let effects = s.join(", ");
 
-        embed = embed.field("Effects", effects, true);
+            embed = embed.field("Effects", effects, true);
+        }
     }
 
     if let Some(image) = strain.image_url {
