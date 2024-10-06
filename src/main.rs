@@ -3,7 +3,7 @@ use std::{env::VarError, process::exit};
 use tracing_subscriber::EnvFilter;
 
 use poise::{
-    serenity_prelude::{self as serenity, Color, CreateEmbed},
+    serenity_prelude::{self as serenity, Color, CreateEmbed, CreateEmbedAuthor, CreateMessage},
     CreateReply, FrameworkOptions,
 };
 use tracing::{error, info, instrument, warn};
@@ -30,8 +30,8 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let _guild_id = match unwrap_env_var("GUILD_ID").parse() {
         Ok(v) => serenity::GuildId::new(v),
-        Err(e) => {
-            error!(?e);
+        Err(error) => {
+            error!(?error);
             exit(1);
         }
     };
@@ -44,6 +44,7 @@ async fn main() -> Result<(), anyhow::Error> {
         commands::utility::ping::ping(),
         commands::utility::help::help(),
         commands::strains::search_strains::search(),
+        commands::strains::fetch_strain::strain(),
         commands::utility::register::register(),
         commands::utility::about::about(),
     ];
@@ -78,7 +79,48 @@ async fn main() -> Result<(), anyhow::Error> {
                     .await
                     .ok();
                 } else {
-                    warn!("Unhandled error: {}", error);
+                    if let Some(ctx) = error.ctx() {
+                        if let Some(channel) = ctx.data().error_channel {
+                            let mut embed = CreateEmbed::new()
+                                .title(format!(
+                                    "Unknown error occured in /{}",
+                                    ctx.command().qualified_name
+                                ))
+                                .description(format!("{}", error))
+                                .color(Color::RED);
+                            if let Some(guild) = ctx.guild_channel().await {
+                                embed = embed.fields([
+                                    (
+                                        "Guild",
+                                        format!(
+                                            "**{}** - `{}`",
+                                            guild
+                                                .guild_id
+                                                .name(ctx.cache())
+                                                .unwrap_or("[Unknown]".into()),
+                                            guild.guild_id.to_string()
+                                        ),
+                                        true,
+                                    ),
+                                    (
+                                        "Channel",
+                                        format!("**{}** - `{}`", guild.name, guild.id.to_string()),
+                                        true,
+                                    ),
+                                ]);
+                            }
+                            let user = ctx.author();
+                            embed = embed.author(CreateEmbedAuthor::new(&user.name));
+                            channel
+                                .send_message(ctx.http(), CreateMessage::new().embed(embed))
+                                .await
+                                .ok();
+                        } else {
+                            warn!("Error Channel Missing - Error: {}", error)
+                        }
+                    } else {
+                        warn!("Unkown Error Occured: {}", error)
+                    }
                 }
             })
         },
