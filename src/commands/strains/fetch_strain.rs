@@ -36,7 +36,23 @@ pub async fn strain(
                 JOIN public.unique_effects e ON se.effect_id = e.id
                 WHERE
                     se.strain_id = s.id
-            ) AS effects
+            ) AS effects,
+            ARRAY (
+                SELECT
+                    f.flavor
+                FROM public.strain_flavors sf
+                JOIN public.unique_flavors f ON sf.flavor_id = f.id
+                WHERE
+                    sf.strain_id = s.id
+            ) AS flavors,
+            ARRAY (
+                SELECT
+                    a.ailment
+                FROM public.strain_ailments sa
+                JOIN public.unique_ailments a ON sa.ailment_id = a.id
+                WHERE
+                    sa.strain_id = s.id
+            ) AS ailments
         FROM public.strains s
         WHERE s.id = $1
         LIMIT 1;
@@ -74,6 +90,10 @@ pub async fn strain(
         .color(Color::PURPLE)
         .footer(CreateEmbedFooter::new(format!("ID: {}", id)));
 
+    if let Some(s) = strain.subspecies {
+        embed = embed.field("Subspecies", s.to_string(), true);
+    }
+
     if let Some(s) = strain.effects.as_ref() {
         if !s.is_empty() {
             let effects = s.join(", ");
@@ -82,9 +102,26 @@ pub async fn strain(
         }
     }
 
+    if let Some(s) = strain.flavors.as_ref() {
+        if !s.is_empty() {
+            let effects = s.join(", ");
+
+            embed = embed.field("Flavors", effects, true);
+        }
+    }
+
+    if let Some(s) = strain.ailments.as_ref() {
+        if !s.is_empty() {
+            let effects = s.join(", ");
+
+            embed = embed.field("Ailments", effects, true);
+        }
+    }
+
     if let Some(image) = strain.image_url {
         embed = embed.image(image);
     }
+
     let reply = CreateReply::default().embed(embed);
     ctx.send(reply).await?;
     Ok(())
