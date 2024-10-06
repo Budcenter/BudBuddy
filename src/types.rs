@@ -1,3 +1,4 @@
+use poise::serenity_prelude::ChannelId;
 use sqlx::{
     postgres::{PgConnectOptions, PgSslMode},
     PgPool,
@@ -6,9 +7,12 @@ use tracing::{debug, error, instrument};
 
 use crate::unwrap_env_var;
 
+#[derive(Debug)]
 pub struct Data {
     pub pool: PgPool,
+    pub error_channel: Option<ChannelId>,
 }
+
 #[instrument]
 async fn connect_to_db() -> PgPool {
     debug!(database_url = dotenvy::var("DATABASE_URL").ok());
@@ -31,8 +35,15 @@ async fn connect_to_db() -> PgPool {
 impl Data {
     /// Panics if it cannot connect to the database from the environment variables
     pub async fn new() -> Self {
+        let mut channel: Option<ChannelId> = None;
+        if let Ok(id) = std::env::var("ERROR_CHANNEL_ID") {
+            if let Ok(parsed) = id.parse::<u64>() {
+                channel = Some(ChannelId::new(parsed))
+            }
+        }
         Self {
             pool: connect_to_db().await,
+            error_channel: channel,
         }
     }
 }
