@@ -42,7 +42,8 @@ async fn strain_counts(pool: &PgPool) -> StrainTotals {
         END
         ) AS "total_indica!"
         FROM
-        public.strains;
+        public.strains
+        LIMIT 1;
     "#
     )
     .fetch_one(pool)
@@ -59,16 +60,20 @@ async fn strain_counts(pool: &PgPool) -> StrainTotals {
 
 #[poise::command(slash_command, required_bot_permissions = "SEND_MESSAGES")]
 pub async fn about(ctx: Context<'_>) -> CommandResult {
-    let counts = STRAIN_COUNTS
+    let strain_counts = STRAIN_COUNTS
         .get_or_init(|| async { strain_counts(&ctx.data().pool).await })
         .await;
+
+    let server_count = ctx.cache().guild_count();
+
     let embed = CreateEmbed::default()
         .title("Hi, I'm BudBuddy")
         .description("The official discord bot for BudCenter services.\n\nTry </help:1290103869791146077> for more commands")
         .color(Color::PURPLE)
         .fields([
             ("Credits", format!("- {} - Lead Developer\n- {} - Cannabot Developer", "@makeshiftartist", "@jay.0404"), true),
-            ("Strains", format!("- `{}` Total\n- `{}` Indica\n- `{}` Sativa\n- `{}` Hybrid\n- `{}` Unknown", counts.total, counts.indica, counts.sativa, counts.hybrid, counts.unknown()), false),
+            ("Strains", format!("- `{}` Total\n- `{}` Indica\n- `{}` Sativa\n- `{}` Hybrid\n- `{}` Unknown", strain_counts.total, strain_counts.indica, strain_counts.sativa, strain_counts.hybrid, strain_counts.unknown()), false),
+            ("Servers", format!("`{}`", server_count), true)
         ]);
 
     let support_button = CreateButton::new_link("https://discord.gg/GjzwzDuD3S")
