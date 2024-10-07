@@ -3,7 +3,7 @@ use poise::samples::HelpConfiguration;
 use crate::types::{CommandResult, Context};
 
 /// Show help message
-#[poise::command(prefix_command, slash_command, category = "Utility")]
+#[poise::command(slash_command, category = "Utility")]
 pub async fn help(
     ctx: Context<'_>,
     #[description = "Command to get help for"]
