@@ -36,7 +36,16 @@ pub async fn strain(
                 JOIN public.unique_effects e ON se.effect_id = e.id
                 WHERE
                     se.strain_id = s.id
-            ) AS effects,
+                    AND e.is_positive IS TRUE
+            ) AS positive_effects,
+            ARRAY (
+                SELECT e.effect
+                FROM public.strain_effects se
+                JOIN public.unique_effects e ON se.effect_id = e.id
+                WHERE
+                    se.strain_id = s.id
+                    AND e.is_positive IS FALSE
+            ) AS negative_effects,
             ARRAY (
                 SELECT
                     f.flavor
@@ -91,14 +100,22 @@ pub async fn strain(
         .footer(CreateEmbedFooter::new(format!("ID: {}", id)));
 
     if let Some(s) = strain.subspecies {
-        embed = embed.field("Subspecies", s.to_string(), true);
+        embed = embed.field("🎨 Subspecies", s.to_string(), false);
     }
 
-    if let Some(s) = strain.effects.as_ref() {
+    if let Some(s) = strain.positive_effects.as_ref() {
         if !s.is_empty() {
             let effects = s.join(", ");
 
-            embed = embed.field("Effects", effects, true);
+            embed = embed.field("🔺 Positive Effects", effects, false);
+        }
+    }
+
+    if let Some(s) = strain.negative_effects.as_ref() {
+        if !s.is_empty() {
+            let effects = s.join(", ");
+
+            embed = embed.field("🔻 Negative Effects", effects, true);
         }
     }
 
@@ -106,7 +123,7 @@ pub async fn strain(
         if !s.is_empty() {
             let effects = s.join(", ");
 
-            embed = embed.field("Flavors", effects, true);
+            embed = embed.field("👅 Flavors", effects, false);
         }
     }
 
@@ -114,7 +131,7 @@ pub async fn strain(
         if !s.is_empty() {
             let effects = s.join(", ");
 
-            embed = embed.field("Ailments", effects, true);
+            embed = embed.field("💊 Ailments", effects, false);
         }
     }
 
