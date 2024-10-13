@@ -9,7 +9,7 @@ dotenvy = "0.15.7"
 poise = "0.6.1"
 rand = "0.8.5"
 serde = "1.0.210"
-sqlx = { version = "0.8.2", features = ["postgres", "runtime-tokio", "time", "tls-rustls", "uuid"] }
+sqlx = { version = "0.8.2", features = ["bigdecimal", "postgres", "runtime-tokio", "time", "tls-rustls", "uuid"] }
 tokio = { version = "1.39.2", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
