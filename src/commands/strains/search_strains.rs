@@ -18,6 +18,21 @@ pub enum Subspecies {
     Ruderalis,
 }
 
+impl std::fmt::Display for Subspecies {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Hybrid => "Hybrid",
+                Self::Indica => "Indica",
+                Self::Sativa => "Sativa",
+                Self::Ruderalis => "Ruderalis",
+            }
+        )
+    }
+}
+
 /// Searches strains with a filter
 #[poise::command(
     slash_command,
@@ -62,10 +77,10 @@ pub async fn search(
             LEFT JOIN public.unique_ailments ua ON sa.ailment_id = ua.id
         WHERE
             (s.NAME ILIKE COALESCE('%' || $1 || '%', s.NAME) OR $1 IS NULL)
-            AND (s.subspecies = COALESCE($2, s.subspecies) OR $2 IS NULL)
-            AND (uf.flavor ILIKE (COALESCE($3, uf.flavor)) OR $3 IS NULL)
-            AND (ue.effect ILIKE (COALESCE($4, ue.effect)) OR $4 IS NULL)
-            AND (ua.ailment ILIKE (COALESCE($5, ua.ailment)) OR $5 IS NULL)
+            AND (s.subspecies = $2 OR $2 IS NULL)
+            AND (uf.flavor ILIKE $3 OR $3 IS NULL)
+            AND (ue.effect ILIKE $4 OR $4 IS NULL)
+            AND (ua.ailment ILIKE $5 OR $5 IS NULL)
         ORDER BY
             s.id ASC
         LIMIT
@@ -80,8 +95,6 @@ pub async fn search(
     .fetch_all(pool)
     .await?;
 
-    let mut description = String::new();
-
     if result.is_empty() {
         let embed = CreateEmbed::default()
             .title("No Strains found")
@@ -91,6 +104,8 @@ pub async fn search(
         ctx.send(reply).await?;
         return Ok(());
     }
+    let mut embed = CreateEmbed::default();
+    let mut description = String::new();
 
     for strain in result {
         description.push_str(&format!("- `{}`: **{}**", strain.id, strain.name));
@@ -102,7 +117,7 @@ pub async fn search(
         None => "Strains".to_string(),
     };
 
-    let embed = CreateEmbed::default()
+    embed = embed
         .title(title)
         .description(description)
         .color(Color::PURPLE);
@@ -112,47 +127,81 @@ pub async fn search(
 }
 
 static FLAVORS: OnceCell<Vec<String>> = OnceCell::const_new();
+static EFFECTS: OnceCell<Vec<String>> = OnceCell::const_new();
+static AILMENTS: OnceCell<Vec<String>> = OnceCell::const_new();
 
 async fn autocomplete_flavors(ctx: Context<'_>, searching: &str) -> Vec<String> {
     let flavors = FLAVORS
         .get_or_init(|| async {
             debug!("Fetched flavors");
             sqlx::query_scalar!(
-                "SELECT DISTINCT flavor FROM public.unique_flavors ORDER BY flavor ASC;"
+                "SELECT DISTINCT flavor
+                FROM public.unique_flavors
+                ORDER BY flavor ASC
+                LIMIT 100;"
             )
             .fetch_all(&ctx.data().pool)
             .await
             .unwrap_or_default()
-            .into_iter()
-            .map(|flavor| flavor.to_lowercase())
-            .collect()
         })
         .await;
+
+    if searching.is_empty() {
+        return flavors.clone();
+    }
 
     flavors
         .clone()
         .into_iter()
-        .filter(|flavor| flavor.starts_with(&searching.to_lowercase()))
+        .filter(|flavor| flavor.to_lowercase().starts_with(&searching.to_lowercase()))
         .collect()
 }
 
 async fn autocomplete_effects(ctx: Context<'_>, searching: &str) -> Vec<String> {
-    let effects = sqlx::query_scalar!("SELECT effect FROM public.unique_effects")
-        .fetch_all(&ctx.data().pool)
-        .await
-        .unwrap_or_default();
+    let effects = EFFECTS
+        .get_or_init(|| async {
+            sqlx::query_scalar!(
+                "SELECT DISTINCT effect
+                FROM public.unique_effects
+                ORDER BY effect ASC
+                LIMIT 100;"
+            )
+            .fetch_all(&ctx.data().pool)
+            .await
+            .unwrap_or_default()
+        })
+        .await;
+
+    if searching.is_empty() {
+        return effects.clone();
+    }
     effects
+        .clone()
         .into_iter()
         .filter(|effect| effect.to_lowercase().starts_with(&searching.to_lowercase()))
         .collect()
 }
 
 async fn autocomplete_ailments(ctx: Context<'_>, searching: &str) -> Vec<String> {
-    let ailments = sqlx::query_scalar!("SELECT ailment FROM public.unique_ailments")
-        .fetch_all(&ctx.data().pool)
-        .await
-        .unwrap_or_default();
+    let ailments = AILMENTS
+        .get_or_init(|| async {
+            sqlx::query_scalar!(
+                "SELECT DISTINCT ailment
+                FROM public.unique_ailments
+                ORDER BY ailment ASC
+                LIMIT 100;"
+            )
+            .fetch_all(&ctx.data().pool)
+            .await
+            .unwrap_or_default()
+        })
+        .await;
+
+    if searching.is_empty() {
+        return ailments.clone();
+    }
     ailments
+        .clone()
         .into_iter()
         .filter(|ailment| {
             ailment
