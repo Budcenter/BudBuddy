@@ -58,7 +58,11 @@ async fn strain_counts(pool: &PgPool) -> StrainTotals {
     }
 }
 
-#[poise::command(slash_command, required_bot_permissions = "SEND_MESSAGES")]
+#[poise::command(
+    slash_command,
+    required_bot_permissions = "SEND_MESSAGES",
+    category = "Utility"
+)]
 pub async fn about(ctx: Context<'_>) -> CommandResult {
     let strain_counts = STRAIN_COUNTS
         .get_or_init(|| async { strain_counts(&ctx.data().pool).await })
