@@ -76,7 +76,7 @@ pub async fn search(
             LEFT JOIN public.strain_ailments sa ON s.id = sa.strain_id
             LEFT JOIN public.unique_ailments ua ON sa.ailment_id = ua.id
         WHERE
-            (s.NAME ILIKE COALESCE('%' || $1 || '%', s.NAME) OR $1 IS NULL)
+            (s.NAME ILIKE ('%' || $1 || '%') OR $1 IS NULL)
             AND (s.subspecies = $2 OR $2 IS NULL)
             AND (uf.flavor ILIKE $3 OR $3 IS NULL)
             AND (ue.effect ILIKE $4 OR $4 IS NULL)
