@@ -1,10 +1,14 @@
 use anyhow::anyhow;
-use std::{env::VarError, process::exit, str::FromStr};
+use sqlx::PgPool;
+use std::{env::VarError, process::exit};
 use tracing_subscriber::EnvFilter;
 
 use poise::{
-    serenity_prelude::{self as serenity, Color, CreateEmbed, CreateEmbedAuthor, CreateMessage},
-    CreateReply, FrameworkOptions,
+    serenity_prelude::{
+        self as serenity, Color, CreateActionRow, CreateButton, CreateEmbed, CreateEmbedAuthor,
+        CreateMessage, ReactionType, User,
+    },
+    CreateReply, FrameworkError, FrameworkOptions,
 };
 use tracing::{error, info, instrument, warn};
 use types::{CommandError, Context, Data};
@@ -108,7 +112,17 @@ fn error_reply(title: &str, message: Option<&str>) -> CreateReply {
 }
 
 async fn global_command_check(ctx: Context<'_>) -> Result<bool, CommandError> {
-    let id = sqlx::types::BigDecimal::from_str(&ctx.author().id.to_string())?;
+    let user_is_blacklisted = is_user_blacklisted(&ctx.data().pool, ctx.author()).await;
+
+    if user_is_blacklisted {
+        return Err(anyhow!("User is blacklisted"));
+    }
+    Ok(!user_is_blacklisted)
+}
+
+async fn is_user_blacklisted(pool: &PgPool, user: &User) -> bool {
+    let id = sqlx::types::BigDecimal::from(user.id.get());
+
     let is_user_blacklisted = sqlx::query_scalar!(
         r#"
         SELECT
@@ -119,43 +133,71 @@ async fn global_command_check(ctx: Context<'_>) -> Result<bool, CommandError> {
             user_id = $1;"#,
         id
     )
-    .fetch_optional(&ctx.data().pool)
+    .fetch_optional(pool)
     .await
-    .unwrap_or_default();
+    .unwrap_or(None);
 
-    Ok(!is_user_blacklisted.unwrap_or(false))
+    is_user_blacklisted.unwrap_or(false)
 }
 
 async fn global_error_handler(error: poise::FrameworkError<'_, Data, CommandError>) {
-    if let poise::FrameworkError::CommandCheckFailed { ctx, .. } = error {
-        ctx.send(error_reply("Blacklisted", None)).await.ok();
-    } else if let poise::FrameworkError::CooldownHit {
-        remaining_cooldown,
-        ctx,
-        ..
-    } = error
-    {
-        ctx.send(error_reply(
+    let mut unknown_error = false;
+    let reply = match error {
+        FrameworkError::CommandCheckFailed { ref error, .. } => {
+            let mut title = String::new();
+            if error.is_some() {
+                title = error.as_ref().unwrap().to_string();
+            }
+            error_reply(
+                &title,
+                Some("If this is a mistake, please contact support in the official support server"),
+            )
+            .components(vec![CreateActionRow::Buttons(vec![
+                CreateButton::new_link("https://discord.gg/GjzwzDuD3S")
+                    .label("Support")
+                    .emoji(ReactionType::Unicode("❓".into())),
+            ])])
+        }
+        FrameworkError::CooldownHit {
+            remaining_cooldown,
+            ctx,
+            ..
+        } => error_reply(
             &format!("/{} on cooldown", ctx.command().qualified_name),
             Some(&format!(
                 "Please wait {:.1} seconds before trying again",
                 remaining_cooldown.as_secs_f32()
             )),
-        ))
-        .await
-        .ok();
-    } else if let poise::FrameworkError::NsfwOnly { ctx, .. } = error {
-        ctx.send(error_reply(
+        ),
+        FrameworkError::NsfwOnly { ctx, .. } => error_reply(
             "NSFW Only Command",
             Some(&format!(
                 "`/{}` can only be used in NSFW channels",
                 ctx.command().identifying_name,
             )),
-        ))
-        .await
-        .ok();
-    } else if let Some(ctx) = error.ctx() {
+        ),
+        ref error => {
+            unknown_error = true;
+            let mut title = String::from("Unknown error occured");
+            if let Some(ctx) = error.ctx() {
+                title.push_str(&format!(" in `/{}`", ctx.command().qualified_name));
+            }
+            error_reply(&title, Some(&error.to_string()))
+        }
+    };
+
+    if let Some(ctx) = error.ctx() {
+        // Send error to user that invoked the command. Don't care if it fails
+        ctx.send(reply.ephemeral(true))
+            .await
+            .inspect_err(|e| warn!("Failed sending message: {}", e))
+            .ok();
+
+        if !unknown_error {
+            return;
+        }
         if let Some(channel) = ctx.data().error_channel {
+            // Embed being sent to error log channel
             let mut embed = CreateEmbed::new()
                 .title(format!(
                     "Unknown error occured in /{}",
@@ -192,13 +234,12 @@ async fn global_error_handler(error: poise::FrameworkError<'_, Data, CommandErro
             channel
                 .send_message(ctx.http(), CreateMessage::new().embed(embed))
                 .await
+                .inspect_err(|e| warn!("Failed to send embed to error channel: {}", e))
                 .ok();
-
-            warn!("Unknown error occured: {:#?}", error);
         } else {
             warn!("Error Channel Missing - Error: {:#?}", error)
         }
     } else {
-        warn!("Unkown Error Occured: {:#?}", error)
+        warn!("Unkown Error Occured 3: {:#?}", error)
     }
 }
