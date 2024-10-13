@@ -5,7 +5,8 @@
         "startup",
         "vscode",
         "commands",
-        "database"
+        "database",
+        "errors"
     ],
     "[rust]": {
         "editor.formatOnSave": true,
