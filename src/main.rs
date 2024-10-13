@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use std::{env::VarError, process::exit};
+use std::{env::VarError, process::exit, str::FromStr};
 use tracing_subscriber::EnvFilter;
 
 use poise::{
@@ -7,7 +7,7 @@ use poise::{
     CreateReply, FrameworkOptions,
 };
 use tracing::{error, info, instrument, warn};
-use types::Data;
+use types::{CommandError, Context, Data};
 
 pub mod commands;
 pub mod types;
@@ -51,77 +51,8 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let framework_options = FrameworkOptions {
         commands,
-        on_error: |error| {
-            Box::pin(async move {
-                if let poise::FrameworkError::CooldownHit {
-                    remaining_cooldown,
-                    ctx,
-                    ..
-                } = error
-                {
-                    ctx.send(error_reply(
-                        &format!("/{} on cooldown", ctx.command().qualified_name),
-                        Some(&format!(
-                            "Please wait {:.1} seconds before trying again",
-                            remaining_cooldown.as_secs_f32()
-                        )),
-                    ))
-                    .await
-                    .ok();
-                } else if let poise::FrameworkError::NsfwOnly { ctx, .. } = error {
-                    ctx.send(error_reply(
-                        "NSFW Only Command",
-                        Some(&format!(
-                            "`/{}` can only be used in NSFW channels",
-                            ctx.command().identifying_name,
-                        )),
-                    ))
-                    .await
-                    .ok();
-                } else if let Some(ctx) = error.ctx() {
-                    if let Some(channel) = ctx.data().error_channel {
-                        let mut embed = CreateEmbed::new()
-                            .title(format!(
-                                "Unknown error occured in /{}",
-                                ctx.command().qualified_name
-                            ))
-                            .description(format!("{}", error))
-                            .color(Color::RED);
-                        if let Some(guild) = ctx.guild_channel().await {
-                            embed = embed.fields([
-                                (
-                                    "Guild",
-                                    format!(
-                                        "**{}** - `{}`",
-                                        guild
-                                            .guild_id
-                                            .name(ctx.cache())
-                                            .unwrap_or("[Unknown]".into()),
-                                        guild.guild_id
-                                    ),
-                                    true,
-                                ),
-                                (
-                                    "Channel",
-                                    format!("**{}** - `{}`", guild.name, guild.id),
-                                    true,
-                                ),
-                            ]);
-                        }
-                        let user = ctx.author();
-                        embed = embed.author(CreateEmbedAuthor::new(&user.name));
-                        channel
-                            .send_message(ctx.http(), CreateMessage::new().embed(embed))
-                            .await
-                            .ok();
-                    } else {
-                        warn!("Error Channel Missing - Error: {}", error)
-                    }
-                } else {
-                    warn!("Unkown Error Occured: {}", error)
-                }
-            })
-        },
+        command_check: Some(|ctx| Box::pin(global_command_check(ctx))),
+        on_error: |error| Box::pin(global_error_handler(error)),
         ..Default::default()
     };
 
@@ -174,4 +105,100 @@ fn error_reply(title: &str, message: Option<&str>) -> CreateReply {
     let embed = error_embed(title, message);
 
     CreateReply::default().embed(embed).ephemeral(true)
+}
+
+async fn global_command_check(ctx: Context<'_>) -> Result<bool, CommandError> {
+    let id = sqlx::types::BigDecimal::from_str(&ctx.author().id.to_string())?;
+    let is_user_blacklisted = sqlx::query_scalar!(
+        r#"
+        SELECT
+            is_blacklisted
+        FROM
+            discord.users
+        WHERE
+            user_id = $1;"#,
+        id
+    )
+    .fetch_optional(&ctx.data().pool)
+    .await
+    .unwrap_or_default();
+
+    Ok(!is_user_blacklisted.unwrap_or(false))
+}
+
+async fn global_error_handler(error: poise::FrameworkError<'_, Data, CommandError>) {
+    if let poise::FrameworkError::CommandCheckFailed { ctx, .. } = error {
+        ctx.send(error_reply("Blacklisted", None)).await.ok();
+    } else if let poise::FrameworkError::CooldownHit {
+        remaining_cooldown,
+        ctx,
+        ..
+    } = error
+    {
+        ctx.send(error_reply(
+            &format!("/{} on cooldown", ctx.command().qualified_name),
+            Some(&format!(
+                "Please wait {:.1} seconds before trying again",
+                remaining_cooldown.as_secs_f32()
+            )),
+        ))
+        .await
+        .ok();
+    } else if let poise::FrameworkError::NsfwOnly { ctx, .. } = error {
+        ctx.send(error_reply(
+            "NSFW Only Command",
+            Some(&format!(
+                "`/{}` can only be used in NSFW channels",
+                ctx.command().identifying_name,
+            )),
+        ))
+        .await
+        .ok();
+    } else if let Some(ctx) = error.ctx() {
+        if let Some(channel) = ctx.data().error_channel {
+            let mut embed = CreateEmbed::new()
+                .title(format!(
+                    "Unknown error occured in /{}",
+                    ctx.command().qualified_name
+                ))
+                .description(format!("{}", error))
+                .color(Color::RED);
+            if let Some(guild) = ctx.guild_channel().await {
+                embed = embed.fields([
+                    (
+                        "Guild",
+                        format!(
+                            "**{}** - `{}`",
+                            guild
+                                .guild_id
+                                .name(ctx.cache())
+                                .unwrap_or("[Unknown]".into()),
+                            guild.guild_id
+                        ),
+                        true,
+                    ),
+                    (
+                        "Channel",
+                        format!("**{}** - `{}`", guild.name, guild.id),
+                        true,
+                    ),
+                ]);
+            }
+            let user = ctx.author();
+            embed = embed.author(CreateEmbedAuthor::new(&format!(
+                "{} - `{}`",
+                user.name, user.id
+            )));
+            channel
+                .send_message(ctx.http(), CreateMessage::new().embed(embed))
+                .await
+                .ok();
+
+            warn!("Unknown error occured: {:#?}", error);
+        } else {
+            warn!("Error Channel Missing - Error: {:#?}", error)
+        }
+    } else {
+        warn!("Unkown Error Occured: {:#?}", error)
+    }
 }
