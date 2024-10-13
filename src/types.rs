@@ -3,7 +3,7 @@ use sqlx::{
     postgres::{PgConnectOptions, PgSslMode},
     PgPool,
 };
-use tracing::{debug, error, instrument};
+use tracing::{debug, error, instrument, warn};
 
 use crate::unwrap_env_var;
 
@@ -40,6 +40,8 @@ impl Data {
             if let Ok(parsed) = id.parse::<u64>() {
                 channel = Some(ChannelId::new(parsed))
             }
+        } else {
+            warn!("ERROR_CHANNEL_ID not set");
         }
         Self {
             pool: connect_to_db().await,
