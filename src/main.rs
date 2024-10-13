@@ -78,49 +78,47 @@ async fn main() -> Result<(), anyhow::Error> {
                     ))
                     .await
                     .ok();
-                } else {
-                    if let Some(ctx) = error.ctx() {
-                        if let Some(channel) = ctx.data().error_channel {
-                            let mut embed = CreateEmbed::new()
-                                .title(format!(
-                                    "Unknown error occured in /{}",
-                                    ctx.command().qualified_name
-                                ))
-                                .description(format!("{}", error))
-                                .color(Color::RED);
-                            if let Some(guild) = ctx.guild_channel().await {
-                                embed = embed.fields([
-                                    (
-                                        "Guild",
-                                        format!(
-                                            "**{}** - `{}`",
-                                            guild
-                                                .guild_id
-                                                .name(ctx.cache())
-                                                .unwrap_or("[Unknown]".into()),
-                                            guild.guild_id.to_string()
-                                        ),
-                                        true,
+                } else if let Some(ctx) = error.ctx() {
+                    if let Some(channel) = ctx.data().error_channel {
+                        let mut embed = CreateEmbed::new()
+                            .title(format!(
+                                "Unknown error occured in /{}",
+                                ctx.command().qualified_name
+                            ))
+                            .description(format!("{}", error))
+                            .color(Color::RED);
+                        if let Some(guild) = ctx.guild_channel().await {
+                            embed = embed.fields([
+                                (
+                                    "Guild",
+                                    format!(
+                                        "**{}** - `{}`",
+                                        guild
+                                            .guild_id
+                                            .name(ctx.cache())
+                                            .unwrap_or("[Unknown]".into()),
+                                        guild.guild_id
                                     ),
-                                    (
-                                        "Channel",
-                                        format!("**{}** - `{}`", guild.name, guild.id.to_string()),
-                                        true,
-                                    ),
-                                ]);
-                            }
-                            let user = ctx.author();
-                            embed = embed.author(CreateEmbedAuthor::new(&user.name));
-                            channel
-                                .send_message(ctx.http(), CreateMessage::new().embed(embed))
-                                .await
-                                .ok();
-                        } else {
-                            warn!("Error Channel Missing - Error: {}", error)
+                                    true,
+                                ),
+                                (
+                                    "Channel",
+                                    format!("**{}** - `{}`", guild.name, guild.id),
+                                    true,
+                                ),
+                            ]);
                         }
+                        let user = ctx.author();
+                        embed = embed.author(CreateEmbedAuthor::new(&user.name));
+                        channel
+                            .send_message(ctx.http(), CreateMessage::new().embed(embed))
+                            .await
+                            .ok();
                     } else {
-                        warn!("Unkown Error Occured: {}", error)
+                        warn!("Error Channel Missing - Error: {}", error)
                     }
+                } else {
+                    warn!("Unkown Error Occured: {}", error)
                 }
             })
         },
