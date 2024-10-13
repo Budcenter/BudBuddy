@@ -144,7 +144,7 @@ async fn global_error_handler(error: poise::FrameworkError<'_, Data, CommandErro
     let mut unknown_error = false;
     let reply = match error {
         FrameworkError::CommandCheckFailed { ref error, .. } => {
-            let mut title = String::new();
+            let mut title = String::from("Command Check Failed");
             if error.is_some() {
                 title = error.as_ref().unwrap().to_string();
             }
