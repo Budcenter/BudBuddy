@@ -143,8 +143,45 @@ async fn is_user_blacklisted(pool: &PgPool, user: &User) -> bool {
 
 async fn global_error_handler(error: poise::FrameworkError<'_, Data, CommandError>) {
     let mut unknown_error = false;
+    let support_button = CreateButton::new_link("https://discord.gg/GjzwzDuD3S")
+        .label("Support")
+        .emoji(ReactionType::Unicode("❓".into()));
+
     let reply = match error {
-        FrameworkError::NotAnOwner { .. } => return (), // No response needed
+        // No response needed
+        FrameworkError::NotAnOwner { .. } => return (),
+        FrameworkError::UnknownCommand { .. } => return (),
+        FrameworkError::DmOnly { ctx, .. } => error_reply(
+            "DM only command",
+            Some(&format!(
+                "`/{}` can only be used in DMs",
+                ctx.command().qualified_name
+            )),
+        ),
+        FrameworkError::GuildOnly { ctx, .. } => error_reply(
+            "Guild only command",
+            Some(&format!(
+                "`/{}` can only be used in guilds (servers)",
+                ctx.command().qualified_name
+            )),
+        ),
+        FrameworkError::MissingUserPermissions {
+            missing_permissions,
+            ..
+        } => {
+            let message = if missing_permissions.is_some() {
+                missing_permissions
+                    .unwrap()
+                    .get_permission_names()
+                    .iter()
+                    .map(|name| format!("`{name}`"))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            } else {
+                "Can't access user permissions".into()
+            };
+            error_reply("User missing permissions", Some(&message))
+        }
         FrameworkError::CommandCheckFailed { ref error, .. } => {
             let mut title = String::from("Command Check Failed");
             if error.is_some() {
@@ -154,11 +191,7 @@ async fn global_error_handler(error: poise::FrameworkError<'_, Data, CommandErro
                 &title,
                 Some("If this is a mistake, please contact support in the official support server"),
             )
-            .components(vec![CreateActionRow::Buttons(vec![
-                CreateButton::new_link("https://discord.gg/GjzwzDuD3S")
-                    .label("Support")
-                    .emoji(ReactionType::Unicode("❓".into())),
-            ])])
+            .components(vec![CreateActionRow::Buttons(vec![support_button])])
         }
         FrameworkError::CooldownHit {
             remaining_cooldown,
@@ -185,6 +218,7 @@ async fn global_error_handler(error: poise::FrameworkError<'_, Data, CommandErro
                 title.push_str(&format!(" in `/{}`", ctx.command().qualified_name));
             }
             error_reply(&title, Some(&error.to_string()))
+                .components(vec![CreateActionRow::Buttons(vec![support_button])])
         }
     };
 
