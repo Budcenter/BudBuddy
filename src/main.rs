@@ -144,6 +144,7 @@ async fn is_user_blacklisted(pool: &PgPool, user: &User) -> bool {
 async fn global_error_handler(error: poise::FrameworkError<'_, Data, CommandError>) {
     let mut unknown_error = false;
     let reply = match error {
+        FrameworkError::NotAnOwner { .. } => return (), // No response needed
         FrameworkError::CommandCheckFailed { ref error, .. } => {
             let mut title = String::from("Command Check Failed");
             if error.is_some() {
