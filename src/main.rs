@@ -51,6 +51,7 @@ async fn main() -> Result<(), anyhow::Error> {
         commands::strains::fetch_strain::strain(),
         commands::utility::register::register(),
         commands::utility::about::about(),
+        commands::strains::puff::puff(),
     ];
 
     let framework_options = FrameworkOptions {
