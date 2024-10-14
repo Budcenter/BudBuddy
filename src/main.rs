@@ -45,13 +45,13 @@ async fn main() -> Result<(), anyhow::Error> {
     let intents = serenity::GatewayIntents::non_privileged();
 
     let commands = vec![
-        commands::utility::ping::ping(),
         commands::utility::help::help(),
+        commands::utility::about::about(),
+        commands::utility::ping::ping(),
         commands::strains::search_strains::search(),
         commands::strains::fetch_strain::strain(),
-        commands::utility::register::register(),
-        commands::utility::about::about(),
         commands::strains::puff::puff(),
+        commands::admin::register::register(),
     ];
 
     let framework_options = FrameworkOptions {
