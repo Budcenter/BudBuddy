@@ -120,11 +120,11 @@ pub async fn puff_reset(ctx: Context<'_>) -> CommandResult {
         CreateButton::new(&cancel_id)
             .style(poise::serenity_prelude::ButtonStyle::Primary)
             .label("Cancel")
-            .emoji(ReactionType::Unicode("↩️".into())),
+            .emoji(ReactionType::Unicode("✖️".into())),
         CreateButton::new(&confirm_id)
             .label("Reset")
             .style(poise::serenity_prelude::ButtonStyle::Danger)
-            .emoji(ReactionType::Unicode("🗑".into())),
+            .emoji(ReactionType::Unicode("⚠️".into())),
     ];
 
     let reply = CreateReply::default()
