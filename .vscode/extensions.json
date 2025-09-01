@@ -2,7 +2,7 @@
     "recommendations": [
         "vivaxy.vscode-conventional-commits",
         "rust-lang.rust-analyzer",
-        "serayuzgur.crates",
+        "fill-labs.dependi",
         "tamasfe.even-better-toml"
     ]
 }
