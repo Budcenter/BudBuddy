@@ -10,6 +10,6 @@ poise = "0.6.1"
 rand = "0.8.5"
 serde = "1.0.210"
 sqlx = { version = "0.8.2", features = ["bigdecimal", "postgres", "runtime-tokio", "time", "tls-rustls", "uuid"] }
-tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.43.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
