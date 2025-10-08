@@ -27,3 +27,15 @@ scripts/
 .env
 prod-ca-2021.crt
 .vscode/sessions.json
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+# sqlx
+.sqlx/
