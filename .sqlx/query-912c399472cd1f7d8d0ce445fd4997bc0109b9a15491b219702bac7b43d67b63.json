@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE discord.users\n        SET puffs= puffs + 1\n        WHERE\n            user_id = $1\n            AND NOT is_restricted\n        RETURNING puffs;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "puffs",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Numeric"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "912c399472cd1f7d8d0ce445fd4997bc0109b9a15491b219702bac7b43d67b63"
+}

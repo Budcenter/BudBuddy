@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO discord.guilds (guild_id) VALUES ($1) ON CONFLICT DO NOTHING;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Numeric"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "88583eb7c5685a30cbe1c7b69153e54ec8029daadb90d88076c6f171ac6c297c"
+}
