@@ -37,5 +37,5 @@ devenv.local.nix
 # pre-commit
 .pre-commit-config.yaml
 
-# sqlx
-.sqlx/
+# We want to enable the sqlx queries so users can compile without connecting to the actual DB
+# .sqlx/
