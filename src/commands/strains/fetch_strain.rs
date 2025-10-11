@@ -4,8 +4,8 @@ use crate::{
     types::{CommandResult, Context},
 };
 use poise::{
-    serenity_prelude::{Color, CreateEmbed, CreateEmbedFooter},
     CreateReply,
+    serenity_prelude::{Color, CreateEmbed, CreateEmbedFooter},
 };
 use tracing::warn;
 
@@ -18,52 +18,45 @@ use tracing::warn;
 )]
 pub async fn strain(
     ctx: Context<'_>,
-    #[description = "ID of the strain"] id: i64,
+    #[description = "ID of the strain"] id: i32,
 ) -> CommandResult {
     let pool = &ctx.data().pool;
 
     let result = sqlx::query!(
         r#"
         SELECT
-            s.name,
-            s.description,
-            s.subspecies as "subspecies:Subspecies",
-            s.image_url,
+            strain.name,
+            strain.description,
+            strain.subspecies as "subspecies:Subspecies",
+            strain.image_url,
             ARRAY (
-                SELECT
-                    e.effect
-                FROM public.strain_effects se
-                JOIN public.unique_effects e ON se.effect_id = e.id
-                WHERE
-                    se.strain_id = s.id
-                    AND e.is_positive IS TRUE
+                SELECT effect.name
+                FROM cannabis.strain_effects se
+                JOIN cannabis.effects effect ON se.effect_id = effect.id
+                WHERE se.strain_id = strain.id
+                AND effect.is_positive IS TRUE
             ) AS positive_effects,
             ARRAY (
-                SELECT e.effect
-                FROM public.strain_effects se
-                JOIN public.unique_effects e ON se.effect_id = e.id
-                WHERE
-                    se.strain_id = s.id
-                    AND e.is_positive IS FALSE
+                SELECT effect.name
+                FROM cannabis.strain_effects se
+                JOIN cannabis.effects effect ON se.effect_id = effect.id
+                WHERE se.strain_id = strain.id
+                AND effect.is_positive IS FALSE
             ) AS negative_effects,
             ARRAY (
-                SELECT
-                    f.flavor
-                FROM public.strain_flavors sf
-                JOIN public.unique_flavors f ON sf.flavor_id = f.id
-                WHERE
-                    sf.strain_id = s.id
+                SELECT flavor.name
+                FROM cannabis.strain_flavors sf
+                JOIN cannabis.flavors flavor ON sf.flavor_id = flavor.id
+                WHERE sf.strain_id = strain.id
             ) AS flavors,
             ARRAY (
-                SELECT
-                    a.ailment
-                FROM public.strain_ailments sa
-                JOIN public.unique_ailments a ON sa.ailment_id = a.id
-                WHERE
-                    sa.strain_id = s.id
+                SELECT ailment.name
+                FROM cannabis.strain_ailments sa
+                JOIN cannabis.ailments ailment ON sa.ailment_id = ailment.id
+                WHERE sa.strain_id = strain.id
             ) AS ailments
-        FROM public.strains s
-        WHERE s.id = $1
+        FROM cannabis.strains strain
+        WHERE strain.id = $1
         LIMIT 1;
         "#,
         id

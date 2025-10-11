@@ -1,13 +1,13 @@
 use std::time::Duration;
 
 use poise::{
+    CreateReply,
     serenity_prelude::{
         self as serenity, Color, CreateActionRow, CreateButton, CreateEmbed,
         CreateInteractionResponseMessage, GuildId, ReactionType, UserId,
     },
-    CreateReply,
 };
-use sqlx::{types::BigDecimal, PgPool};
+use sqlx::{PgPool, types::BigDecimal};
 
 use crate::types::{CommandError, CommandResult, Context};
 use anyhow::anyhow;
@@ -63,14 +63,14 @@ async fn insert_user(pool: &PgPool, user_id: &UserId) -> bool {
     result.is_ok()
 }
 
-async fn increment_user_puffs(pool: &PgPool, user_id: &UserId) -> Result<i64, CommandError> {
+async fn increment_user_puffs(pool: &PgPool, user_id: &UserId) -> Result<i32, CommandError> {
     sqlx::query_scalar!(
         r#"
         UPDATE discord.users
         SET puffs= puffs + 1
         WHERE
             user_id = $1
-            AND NOT is_blacklisted
+            AND NOT is_restricted
         RETURNING puffs;"#,
         BigDecimal::from(user_id.get())
     )
@@ -79,14 +79,14 @@ async fn increment_user_puffs(pool: &PgPool, user_id: &UserId) -> Result<i64, Co
     .map_err(|_| anyhow!("Failed to update user puffs"))
 }
 
-async fn increment_guild_puffs(pool: &PgPool, guild_id: &GuildId) -> Result<i64, CommandError> {
+async fn increment_guild_puffs(pool: &PgPool, guild_id: &GuildId) -> Result<i32, CommandError> {
     sqlx::query_scalar!(
         r#"
         UPDATE discord.guilds
         SET puffs = puffs + 1
         WHERE
             guild_id = $1
-            AND NOT is_blacklisted
+            AND NOT is_restricted
         RETURNING puffs;"#,
         BigDecimal::from(guild_id.get())
     )
