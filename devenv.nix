@@ -8,7 +8,7 @@
 
 {
   # https://devenv.sh/basics/
-  env.GREET = "devenv";
+  # env.GREET = "devenv";
 
   # https://devenv.sh/packages/
   packages = [
@@ -30,17 +30,24 @@
   services.postgres = {
     enable = true;
     listen_addresses = "127.0.0.1";
+    # settings = {
+    #   ssl = "on";
+    #   ssl_cert_file = "./server.crt";
+    #   ssl_key_file = "./server.key";
+    # };
   };
 
   # https://devenv.sh/scripts/
-  scripts.hello.exec = ''
-    echo hello from $GREET
-  '';
+  # scripts.hello.exec = ''
+  #   echo hello from $GREET
+  # '';
 
   # https://devenv.sh/basics/
   enterShell = ''
-    hello         # Run scripts directly
     git --version # Use packages
+    nix --version
+    devenv -V
+    cargo -V
   '';
 
   # https://devenv.sh/tasks/
@@ -52,11 +59,21 @@
   # https://devenv.sh/tests/
   enterTest = ''
     echo "Running tests"
-    git --version | grep --color=auto "${pkgs.git.version}"
+    cargo test
   '';
 
   # https://devenv.sh/git-hooks/
   # git-hooks.hooks.shellcheck.enable = true;
+  git-hooks.hooks = {
+    # clippy.enable = true;
+    rustfmt = {
+      enable = true;
+      settings = {
+        emit = "files";
+      };
+    };
+    cargo-check.enable = true;
+  };
 
   # See full reference at https://devenv.sh/reference/options/
 }
