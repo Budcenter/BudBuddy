@@ -39,3 +39,7 @@ devenv.local.nix
 
 # We want to enable the sqlx queries so users can compile without connecting to the actual DB
 # .sqlx/
+
+# SSL
+server.key
+server.crt
