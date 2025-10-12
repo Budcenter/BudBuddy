@@ -1,11 +1,6 @@
 use poise::serenity_prelude::ChannelId;
-use sqlx::{
-    PgPool,
-    postgres::{PgConnectOptions, PgSslMode},
-};
+use sqlx::{PgPool, postgres::PgConnectOptions};
 use tracing::{debug, error, instrument, warn};
-
-use crate::unwrap_env_var;
 
 #[derive(Debug)]
 pub struct Data {
@@ -17,9 +12,7 @@ pub struct Data {
 async fn connect_to_db() -> PgPool {
     debug!(database_url = std::env::var("DATABASE_URL").ok());
 
-    let pg_options = PgConnectOptions::new().database("budbuddy");
-    // .ssl_mode(PgSslMode::VerifyFull)
-    // .ssl_root_cert(unwrap_env_var("SSL_CERTIFICATE"));
+    let pg_options = PgConnectOptions::new();
 
     debug!("{:#?}", pg_options);
 
