@@ -1,6 +1,6 @@
 use poise::{
-    serenity_prelude::{Color, CreateEmbed},
     ChoiceParameter, CreateReply,
+    serenity_prelude::{Color, CreateEmbed},
 };
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
@@ -10,7 +10,7 @@ use tracing::debug;
 use crate::types::{CommandResult, Context};
 
 #[derive(Debug, Type, Deserialize, Serialize, ChoiceParameter)]
-#[sqlx(type_name = "subspecies", rename_all = "lowercase")]
+#[sqlx(type_name = "cannabis.subspecies", rename_all = "lowercase")]
 pub enum Subspecies {
     Hybrid,
     Indica,
@@ -62,25 +62,25 @@ pub async fn search(
             s.id,
             s.NAME
         FROM
-            public.strains s
+            cannabis.strains s
 
             -- Flavors
-            LEFT JOIN public.strain_flavors sf ON s.id = sf.strain_id
-            LEFT JOIN public.unique_flavors uf ON sf.flavor_id = uf.id
+            LEFT JOIN cannabis.strain_flavors sf ON s.id = sf.strain_id
+            LEFT JOIN cannabis.flavors uf ON sf.flavor_id = uf.id
 
             -- Effects
-            LEFT JOIN public.strain_effects se ON s.id = se.strain_id
-            LEFT JOIN public.unique_effects ue ON se.effect_id = ue.id
+            LEFT JOIN cannabis.strain_effects se ON s.id = se.strain_id
+            LEFT JOIN cannabis.effects ue ON se.effect_id = ue.id
 
             -- Ailments
-            LEFT JOIN public.strain_ailments sa ON s.id = sa.strain_id
-            LEFT JOIN public.unique_ailments ua ON sa.ailment_id = ua.id
+            LEFT JOIN cannabis.strain_ailments sa ON s.id = sa.strain_id
+            LEFT JOIN cannabis.ailments ua ON sa.ailment_id = ua.id
         WHERE
             (s.NAME ILIKE ('%' || $1 || '%') OR $1 IS NULL)
             AND (s.subspecies = $2 OR $2 IS NULL)
-            AND (uf.flavor ILIKE $3 OR $3 IS NULL)
-            AND (ue.effect ILIKE $4 OR $4 IS NULL)
-            AND (ua.ailment ILIKE $5 OR $5 IS NULL)
+            AND (uf.name ILIKE $3 OR $3 IS NULL)
+            AND (ue.name ILIKE $4 OR $4 IS NULL)
+            AND (ua.name ILIKE $5 OR $5 IS NULL)
         ORDER BY
             s.id ASC
         LIMIT
@@ -135,9 +135,9 @@ async fn autocomplete_flavors(ctx: Context<'_>, searching: &str) -> Vec<String> 
         .get_or_init(|| async {
             debug!("Fetched flavors");
             sqlx::query_scalar!(
-                "SELECT DISTINCT flavor
-                FROM public.unique_flavors
-                ORDER BY flavor ASC
+                "SELECT DISTINCT name
+                FROM cannabis.flavors
+                ORDER BY name ASC
                 LIMIT 100;"
             )
             .fetch_all(&ctx.data().pool)
@@ -161,9 +161,9 @@ async fn autocomplete_effects(ctx: Context<'_>, searching: &str) -> Vec<String> 
     let effects = EFFECTS
         .get_or_init(|| async {
             sqlx::query_scalar!(
-                "SELECT DISTINCT effect
-                FROM public.unique_effects
-                ORDER BY effect ASC
+                "SELECT DISTINCT name
+                FROM cannabis.effects
+                ORDER BY name ASC
                 LIMIT 100;"
             )
             .fetch_all(&ctx.data().pool)
@@ -186,9 +186,9 @@ async fn autocomplete_ailments(ctx: Context<'_>, searching: &str) -> Vec<String>
     let ailments = AILMENTS
         .get_or_init(|| async {
             sqlx::query_scalar!(
-                "SELECT DISTINCT ailment
-                FROM public.unique_ailments
-                ORDER BY ailment ASC
+                "SELECT DISTINCT name
+                FROM cannabis.ailments
+                ORDER BY name ASC
                 LIMIT 100;"
             )
             .fetch_all(&ctx.data().pool)

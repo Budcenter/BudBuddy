@@ -1,6 +1,6 @@
 use poise::{
-    serenity_prelude::{Color, CreateActionRow, CreateButton, CreateEmbed, ReactionType},
     CreateReply,
+    serenity_prelude::{Color, CreateActionRow, CreateButton, CreateEmbed, ReactionType},
 };
 use sqlx::PgPool;
 
@@ -42,7 +42,7 @@ async fn strain_counts(pool: &PgPool) -> StrainTotals {
         END
         ) AS "total_indica!"
         FROM
-        public.strains
+        cannabis.strains
         LIMIT 1;
     "#
     )

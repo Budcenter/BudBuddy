@@ -4,13 +4,13 @@ use std::{env::VarError, process::exit};
 use tracing_subscriber::EnvFilter;
 
 use poise::{
+    CreateReply, FrameworkError, FrameworkOptions,
     serenity_prelude::{
         self as serenity, Color, CreateActionRow, CreateButton, CreateEmbed, CreateEmbedAuthor,
         CreateMessage, ReactionType, User,
     },
-    CreateReply, FrameworkError, FrameworkOptions,
 };
-use tracing::{error, info, instrument, warn};
+use tracing::{debug, error, info, instrument, level_filters::LevelFilter, warn};
 use types::{CommandError, Context, Data};
 
 pub mod commands;
@@ -19,19 +19,20 @@ pub mod types;
 #[tokio::main]
 #[instrument]
 async fn main() -> Result<(), anyhow::Error> {
-    dotenvy::dotenv().ok();
+    // dotenvy::dotenv().ok();
 
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info");
-    }
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .from_env_lossy(),
+        )
         .init();
 
     let bot_data = Data::new().await;
 
     let token = unwrap_env_var("DISCORD_TOKEN");
-
+    debug!(token);
     let _guild_id = match unwrap_env_var("GUILD_ID").parse() {
         Ok(v) => serenity::GuildId::new(v),
         Err(error) => {
@@ -113,21 +114,21 @@ fn error_reply(title: &str, message: Option<&str>) -> CreateReply {
 }
 
 async fn global_command_check(ctx: Context<'_>) -> Result<bool, CommandError> {
-    let user_is_blacklisted = is_user_blacklisted(&ctx.data().pool, ctx.author()).await;
+    let user_is_restricted = is_user_restricted(&ctx.data().pool, ctx.author()).await;
 
-    if user_is_blacklisted {
-        return Err(anyhow!("User is blacklisted"));
+    if user_is_restricted {
+        return Err(anyhow!("User is restricted"));
     }
-    Ok(!user_is_blacklisted)
+    Ok(!user_is_restricted)
 }
 
-async fn is_user_blacklisted(pool: &PgPool, user: &User) -> bool {
+async fn is_user_restricted(pool: &PgPool, user: &User) -> bool {
     let id = sqlx::types::BigDecimal::from(user.id.get());
 
-    let is_user_blacklisted = sqlx::query_scalar!(
+    let is_user_restricted = sqlx::query_scalar!(
         r#"
         SELECT
-            is_blacklisted
+            is_restricted
         FROM
             discord.users
         WHERE
@@ -138,7 +139,7 @@ async fn is_user_blacklisted(pool: &PgPool, user: &User) -> bool {
     .await
     .unwrap_or(None);
 
-    is_user_blacklisted.unwrap_or(false)
+    is_user_restricted.unwrap_or(false)
 }
 
 async fn global_error_handler(error: poise::FrameworkError<'_, Data, CommandError>) {
@@ -241,6 +242,7 @@ async fn global_error_handler(error: poise::FrameworkError<'_, Data, CommandErro
                 ))
                 .description(format!("{}", error))
                 .color(Color::RED);
+            debug!("{:#?}", error);
             if let Some(guild) = ctx.guild_channel().await {
                 embed = embed.fields([
                     (

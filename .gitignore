@@ -27,3 +27,19 @@ scripts/
 .env
 prod-ca-2021.crt
 .vscode/sessions.json
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+# We want to enable the sqlx queries so users can compile without connecting to the actual DB
+# .sqlx/
+
+# SSL
+server.key
+server.crt

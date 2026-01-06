@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            strain.name,\n            strain.description,\n            strain.subspecies as \"subspecies:Subspecies\",\n            strain.image_url,\n            ARRAY (\n                SELECT effect.name\n                FROM cannabis.strain_effects se\n                JOIN cannabis.effects effect ON se.effect_id = effect.id\n                WHERE se.strain_id = strain.id\n                AND effect.is_positive IS TRUE\n            ) AS positive_effects,\n            ARRAY (\n                SELECT effect.name\n                FROM cannabis.strain_effects se\n                JOIN cannabis.effects effect ON se.effect_id = effect.id\n                WHERE se.strain_id = strain.id\n                AND effect.is_positive IS FALSE\n            ) AS negative_effects,\n            ARRAY (\n                SELECT flavor.name\n                FROM cannabis.strain_flavors sf\n                JOIN cannabis.flavors flavor ON sf.flavor_id = flavor.id\n                WHERE sf.strain_id = strain.id\n            ) AS flavors,\n            ARRAY (\n                SELECT ailment.name\n                FROM cannabis.strain_ailments sa\n                JOIN cannabis.ailments ailment ON sa.ailment_id = ailment.id\n                WHERE sa.strain_id = strain.id\n            ) AS ailments\n        FROM cannabis.strains strain\n        WHERE strain.id = $1\n        LIMIT 1;\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "subspecies:Subspecies",
+        "type_info": {
+          "Custom": {
+            "name": "cannabis.subspecies",
+            "kind": {
+              "Enum": [
+                "sativa",
+                "indica",
+                "ruderalis",
+                "hybrid"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "image_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "positive_effects",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 5,
+        "name": "negative_effects",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 6,
+        "name": "flavors",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 7,
+        "name": "ailments",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "bd9527685be3b9f57d4fa270d19476f28c44b3b844bbf4bf59fa0087a3bd8852"
+}
